@@ -3,13 +3,10 @@ package com.cc_rental.user.apis.services;
 import com.cc_rental.common.utillity.Converter;
 import com.cc_rental.common.utillity.Sha512;
 import com.cc_rental.user.apis.containers.EmailFindResultContainer;
-import com.cc_rental.user.apis.enums.EmailFindResult;
-import com.cc_rental.user.apis.enums.PasswordFindResult;
-import com.cc_rental.user.apis.enums.UserRegisterResult;
+import com.cc_rental.user.apis.enums.*;
 import com.cc_rental.user.apis.vos.*;
 import com.cc_rental.common.vos.UserVo;
 import com.cc_rental.user.apis.daos.UserDao;
-import com.cc_rental.user.apis.enums.UserLoginResult;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -29,7 +26,7 @@ public class UserService {
     private final UserDao userDao;
 
     @Autowired
-    public UserService(MailService mailService,DataSource dataSource, UserDao userDao) {
+    public UserService(MailService mailService, DataSource dataSource, UserDao userDao) {
         this.dataSource = dataSource;
         this.userDao = userDao;
         this.mailService = mailService;
@@ -91,23 +88,25 @@ public class UserService {
             }
         }
     }
+
     public PasswordFindResult findPassword(FindPasswordVo findPasswordVo) throws
             SQLException {
-        try(Connection connection = this.dataSource.getConnection()) {
-            UserVo userVo = this.userDao.selectUser(connection,findPasswordVo );
-            if(userVo == null){
+        try (Connection connection = this.dataSource.getConnection()) {
+            UserVo userVo = this.userDao.selectUser(connection, findPasswordVo);
+            if (userVo == null) {
                 return PasswordFindResult.USER_NOT_FOUND;
-            }else {
-                String key = Sha512.hash(String.format("%s%s%s%f",
+            } else{
+                String key = Sha512.hash(String.format("%s%s%s%s%f",
                         findPasswordVo.getEmail(),
                         findPasswordVo.getName(),
+                        findPasswordVo.getContact(),
                         new SimpleDateFormat("yyyyMMddHHmmss").format(new Date()),
                         Math.random()
-                        ));
+                ));
                 this.userDao.insertPasswordKey(connection, findPasswordVo, key);
                 SendMailVo sendMailVo = new SendMailVo(
                         "[사이트 이름] 비밀번호 재설정 링크",
-                        String.format("<a href=\"http://127.0.0.1/apis/user/reset_password?key=%s\" target=\"_blank\">복사하여 주소록에 붙이시오. </a>",
+                        String.format("<a href=\"http://127.0.0.1/user/reset_password?key=%s\" target=\"_blank\">복사하여 주소록에 붙이시오. </a>",
                                 key),
                         findPasswordVo.getEmail()
                 );
@@ -117,6 +116,18 @@ public class UserService {
         }
     }
 
+    public ResetPasswordResult resetPassword(ResetPasswordVo resetPasswordVo) throws
+            SQLException {
+        try (Connection connection = this.dataSource.getConnection()) {
+            String email = this.userDao.selectPasswordKeyEmail(connection, resetPasswordVo);
+            if (email == null) {
+                return ResetPasswordResult.FAILURE;
+            }
+            this.userDao.updatePasswordKeyUsed(connection, resetPasswordVo);
+            this.userDao.updatePassword(connection, resetPasswordVo, email);
+            return ResetPasswordResult.SUCCESS;
+        }
+    }
 }
 
 

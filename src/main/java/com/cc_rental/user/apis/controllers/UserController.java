@@ -2,11 +2,8 @@ package com.cc_rental.user.apis.controllers;
 
 import com.cc_rental.user.apis.containers.EmailFindResultContainer;
 import com.cc_rental.user.apis.enums.*;
-import com.cc_rental.user.apis.vos.EmailFindVo;
-import com.cc_rental.user.apis.vos.FindPasswordVo;
-import com.cc_rental.user.apis.vos.UserLoginVo;
+import com.cc_rental.user.apis.vos.*;
 import com.cc_rental.user.apis.services.UserService;
-import com.cc_rental.user.apis.vos.UserRegisterVo;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -86,13 +83,31 @@ public class UserController {
         return "user/find_password";
     }
 
-    @RequestMapping(value = "find_password", method = RequestMethod.POST)
+    @RequestMapping(
+            value = "find_password",
+            method = RequestMethod.POST,
+            produces = MediaType.APPLICATION_JSON_VALUE)
     public String findPasswordPost(HttpServletRequest request, HttpServletResponse response,
                                    @RequestParam(name = "email", defaultValue = "") String email,
-                                   @RequestParam(name = "name", defaultValue = "") String name) throws
+                                   @RequestParam(name = "name", defaultValue = "") String name,
+                                   @RequestParam(name = "contact", defaultValue = "") String contact) throws
             SQLException {
-        FindPasswordVo findPasswordVo = new FindPasswordVo(email, name);
+        FindPasswordVo findPasswordVo = new FindPasswordVo(email, name, contact);
         PasswordFindResult passwordFindResult = this.userService.findPassword(findPasswordVo);
-        return String.format("redirect:/user/find_password?result=%s", passwordFindResult.name().toLowerCase());
+        JSONObject jsonResponse = new JSONObject();
+        jsonResponse.put("result", passwordFindResult.name().toLowerCase());
+        return jsonResponse.toString(4);
+    }
+
+    @RequestMapping(value = "reset_password", method = RequestMethod.POST)
+    public String resetPasswordPost(HttpServletRequest request, HttpServletResponse response,
+                                    @RequestParam(name = "password", defaultValue = "") String password,
+                                    @RequestParam(name = "key", defaultValue = "") String key) throws
+            SQLException {
+        ResetPasswordVo resetPasswordVo = new ResetPasswordVo(password, key);
+        ResetPasswordResult resetPasswordResult = this.userService.resetPassword(resetPasswordVo);
+        JSONObject jsonResponse = new JSONObject();
+        jsonResponse.put("result", resetPasswordResult.name().toLowerCase());
+        return jsonResponse.toString(4);
     }
 }

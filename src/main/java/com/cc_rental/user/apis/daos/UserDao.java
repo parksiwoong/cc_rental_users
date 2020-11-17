@@ -4,10 +4,15 @@ import com.cc_rental.user.apis.vos.*;
 import com.cc_rental.common.vos.UserVo;
 import org.springframework.stereotype.Repository;
 
+import javax.xml.transform.Result;
+import java.net.ConnectException;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 @Repository
 public class UserDao {
@@ -69,10 +74,12 @@ public class UserDao {
                 "FROM cc_rental.users\n" +
                 "WHERE `user_email` = ?\n" +
                 "  AND `user_name` = ?\n" +
+                "  AND `user_contact` = ?\n" +
                 "LIMIT 1";
         try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1, findPasswordVo.getEmail());
             preparedStatement.setString(2, findPasswordVo.getName());
+            preparedStatement.setString(3, findPasswordVo.getContact());
             preparedStatement.executeQuery();
             try (ResultSet resultSet = preparedStatement.getResultSet()) {
                 while (resultSet.next()) {
@@ -182,6 +189,46 @@ public class UserDao {
         try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1, findPasswordVo.getEmail());
             preparedStatement.setString(2, key);
+            preparedStatement.execute();
+        }
+    }
+
+    public String selectPasswordKeyEmail(Connection connection, ResetPasswordVo resetPasswordVo) throws SQLException {
+        String email = null;
+        String query = "" +
+                "SELECT `user_email` AS `userEmail` " +
+                "FROM `cc_rental`.`password_keys` " +
+                "WHERE " +
+                "    `key_value` = ? AND " +
+                "    `key_valid_until` > NOW() AND " +
+                "    `key_use_whether` = FALSE";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, resetPasswordVo.getKey());
+            preparedStatement.execute();
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    email = resultSet.getString("userEmail");
+                }
+            }
+        }
+        return email;
+    }
+
+    public void updatePasswordKeyUsed(Connection connection, ResetPasswordVo resetPasswordVo) throws
+            SQLException{
+        String query = "UPDATE `cc_rental`.`password_keys` SET `key_use_whether` = TRUE WHERE `key_value` = ?";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, resetPasswordVo.getKey());
+            preparedStatement.execute();
+        }
+    }
+
+    public void updatePassword(Connection connection, ResetPasswordVo resetPasswordVo, String email) throws
+            SQLException {
+        String query = "UPDATE `cc_rental`.`users` SET `user_password` = ? WHERE `user_email` = ?";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, resetPasswordVo.getHashedPassword());
+            preparedStatement.setString(2, email);
             preparedStatement.execute();
         }
     }
