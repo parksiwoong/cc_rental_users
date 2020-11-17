@@ -1,9 +1,7 @@
 package com.cc_rental.user.apis.daos;
 
-import com.cc_rental.user.apis.vos.EmailFindVo;
-import com.cc_rental.user.apis.vos.UserLoginVo;
+import com.cc_rental.user.apis.vos.*;
 import com.cc_rental.common.vos.UserVo;
-import com.cc_rental.user.apis.vos.UserRegisterVo;
 import org.springframework.stereotype.Repository;
 
 import java.sql.Connection;
@@ -34,6 +32,47 @@ public class UserDao {
         try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
             preparedStatement.setString(1, userLoginVo.getEmail());
             preparedStatement.setString(2, userLoginVo.getHashedPassword());
+            preparedStatement.executeQuery();
+            try (ResultSet resultSet = preparedStatement.getResultSet()) {
+                while (resultSet.next()) {
+                    userVo = new UserVo(
+                            resultSet.getInt("userIndex"),
+                            resultSet.getString("userEmail"),
+                            resultSet.getString("userPassword"),
+                            resultSet.getString("userName"),
+                            resultSet.getString("userContact"),
+                            resultSet.getString("userAddress"),
+                            resultSet.getString("userLtype"),
+                            resultSet.getString("userLnumber"),
+                            resultSet.getString("userLdate"),
+                            resultSet.getInt("userLevel"));
+                }
+            }
+        }
+        return userVo;
+    }
+
+    public UserVo selectUser(Connection connection, FindPasswordVo findPasswordVo) throws
+            SQLException {
+        UserVo userVo = null;
+        String query = "" +
+                "SELECT `user_index`              AS `userIndex`,\n" +
+                "       `user_email`              AS `userEmail`,\n" +
+                "       `user_password`           AS `userPassword`,\n" +
+                "       `user_name`               AS `userName`,\n" +
+                "       `user_contact`            AS `userContact`,\n" +
+                "       `user_address`            AS `userAddress`,\n" +
+                "       `user_license_type`       AS `userLtype`,\n" +
+                "       `user_license_number`     AS `userLnumber`,\n" +
+                "       `user_license_issue_date` AS `userLdate`,\n" +
+                "       `user_level`              AS `userLevel`\n" +
+                "FROM cc_rental.users\n" +
+                "WHERE `user_email` = ?\n" +
+                "  AND `user_name` = ?\n" +
+                "LIMIT 1";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, findPasswordVo.getEmail());
+            preparedStatement.setString(2, findPasswordVo.getName());
             preparedStatement.executeQuery();
             try (ResultSet resultSet = preparedStatement.getResultSet()) {
                 while (resultSet.next()) {
@@ -125,12 +164,26 @@ public class UserDao {
             preparedStatement.setString(2, emailFindVo.getContact());
             preparedStatement.executeQuery();
             try (ResultSet resultSet = preparedStatement.getResultSet()) {
-                while (resultSet.next()){
+                while (resultSet.next()) {
                     email = resultSet.getString("userEmail");
                 }
             }
         }
         return email;
-
     }
+
+    public void insertPasswordKey(Connection connection, FindPasswordVo findPasswordVo, String key) throws
+            SQLException {
+        String query = "" +
+                "   INSERT INTO `cc_rental`.`password_keys` (     `user_email`,      \n" +
+                "                                                 `key_value`,       \n" +
+                "                                                 `key_valid_until`) \n" +
+                "            VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))";
+        try (PreparedStatement preparedStatement = connection.prepareStatement(query)) {
+            preparedStatement.setString(1, findPasswordVo.getEmail());
+            preparedStatement.setString(2, key);
+            preparedStatement.execute();
+        }
+    }
+
 }

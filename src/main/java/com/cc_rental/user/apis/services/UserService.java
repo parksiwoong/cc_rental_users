@@ -1,34 +1,38 @@
 package com.cc_rental.user.apis.services;
 
 import com.cc_rental.common.utillity.Converter;
+import com.cc_rental.common.utillity.Sha512;
 import com.cc_rental.user.apis.containers.EmailFindResultContainer;
 import com.cc_rental.user.apis.enums.EmailFindResult;
+import com.cc_rental.user.apis.enums.PasswordFindResult;
 import com.cc_rental.user.apis.enums.UserRegisterResult;
-import com.cc_rental.user.apis.vos.EmailFindVo;
-import com.cc_rental.user.apis.vos.UserLoginVo;
+import com.cc_rental.user.apis.vos.*;
 import com.cc_rental.common.vos.UserVo;
 import com.cc_rental.user.apis.daos.UserDao;
 import com.cc_rental.user.apis.enums.UserLoginResult;
-import com.cc_rental.user.apis.vos.UserRegisterVo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 @Service
 public class UserService {
     private static final String EMAIL_REGEX = "^(?=.{4,100}.$)([0-9a-zA-Z][0-9a-zA-Z\\-_.]*[0-9a-zA-Z])@([0-9a-z][0-9a-z\\-]*[0-9a-z]\\.)?([0-9a-z][0-9a-z\\-]*[0-9a-z])\\.([a-z]{2,15})(\\.[a-z]{2})?$";
     private static final String PASSWORD_REGEX = "^([0-9a-zA-Z`~!@#$%^&*()\\-_=+\\[{\\]}\\\\|;:'\",<.>/?]{4,100})$";
 
+    private final MailService mailService;
     private final DataSource dataSource;
     private final UserDao userDao;
 
     @Autowired
-    public UserService(DataSource dataSource, UserDao userDao) {
+    public UserService(MailService mailService,DataSource dataSource, UserDao userDao) {
         this.dataSource = dataSource;
         this.userDao = userDao;
+        this.mailService = mailService;
     }
 
     public UserLoginResult login(UserLoginVo userLoginVo)
@@ -87,6 +91,32 @@ public class UserService {
             }
         }
     }
+    public PasswordFindResult findPassword(FindPasswordVo findPasswordVo) throws
+            SQLException {
+        try(Connection connection = this.dataSource.getConnection()) {
+            UserVo userVo = this.userDao.selectUser(connection,findPasswordVo );
+            if(userVo == null){
+                return PasswordFindResult.USER_NOT_FOUND;
+            }else {
+                String key = Sha512.hash(String.format("%s%s%s%f",
+                        findPasswordVo.getEmail(),
+                        findPasswordVo.getName(),
+                        new SimpleDateFormat("yyyyMMddHHmmss").format(new Date()),
+                        Math.random()
+                        ));
+                this.userDao.insertPasswordKey(connection, findPasswordVo, key);
+                SendMailVo sendMailVo = new SendMailVo(
+                        "[사이트 이름] 비밀번호 재설정 링크",
+                        String.format("<a href=\"http://127.0.0.1/apis/user/reset_password?key=%s\" target=\"_blank\">복사하여 주소록에 붙이시오. </a>",
+                                key),
+                        findPasswordVo.getEmail()
+                );
+                this.mailService.send(sendMailVo);
+                return PasswordFindResult.EMAIL_SENT;
+            }
+        }
+    }
+
 }
 
 

@@ -1,11 +1,10 @@
 package com.cc_rental.user.apis.controllers;
 
 import com.cc_rental.user.apis.containers.EmailFindResultContainer;
-import com.cc_rental.user.apis.enums.EmailFindResult;
-import com.cc_rental.user.apis.enums.UserRegisterResult;
+import com.cc_rental.user.apis.enums.*;
 import com.cc_rental.user.apis.vos.EmailFindVo;
+import com.cc_rental.user.apis.vos.FindPasswordVo;
 import com.cc_rental.user.apis.vos.UserLoginVo;
-import com.cc_rental.user.apis.enums.UserLoginResult;
 import com.cc_rental.user.apis.services.UserService;
 import com.cc_rental.user.apis.vos.UserRegisterVo;
 import org.json.JSONObject;
@@ -46,7 +45,7 @@ public class UserController {
 
 
     @RequestMapping(value = "/register", method = RequestMethod.POST)
-    public String RegisterPost(HttpServletRequest request, HttpServletResponse response,
+    public String registerPost(HttpServletRequest request, HttpServletResponse response,
                                @RequestParam(name = "email", defaultValue = "") String email,
                                @RequestParam(name = "password", defaultValue = "") String password,
                                @RequestParam(name = "name", defaultValue = "") String name,
@@ -69,7 +68,7 @@ public class UserController {
             method = RequestMethod.POST,
             produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
-    public String FindEmailPost(HttpServletRequest request, HttpServletResponse response,
+    public String findEmailPost(HttpServletRequest request, HttpServletResponse response,
                                 @RequestParam(name = "name", defaultValue = "") String name,
                                 @RequestParam(name = "contact", defaultValue = "") String contact)
             throws SQLException {
@@ -81,5 +80,19 @@ public class UserController {
             jsonResponse.put("email", emailFindResultContainer.getEmail());
         }
         return jsonResponse.toString(4);
+    }
+    @RequestMapping(value = "find_password", method = RequestMethod.GET)
+    public String findPasswordGet(HttpServletRequest request, HttpServletResponse response) {
+        return "user/find_password";
+    }
+
+    @RequestMapping(value = "find_password", method = RequestMethod.POST)
+    public String findPasswordPost(HttpServletRequest request, HttpServletResponse response,
+                                   @RequestParam(name = "email", defaultValue = "") String email,
+                                   @RequestParam(name = "name", defaultValue = "") String name) throws
+            SQLException {
+        FindPasswordVo findPasswordVo = new FindPasswordVo(email, name);
+        PasswordFindResult passwordFindResult = this.userService.findPassword(findPasswordVo);
+        return String.format("redirect:/user/find_password?result=%s", passwordFindResult.name().toLowerCase());
     }
 }
