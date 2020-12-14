@@ -10,3 +10,5 @@
 - 팀프로젝트로 만들게된 제가 맡은 회원담당 페이지입니다. 
 
 ![화면 캡처 2020-12-15 012502](https://user-images.githubusercontent.com/66085260/102106842-682f7080-3e74-11eb-9c2e-f5e4020d9b07.png)
+
+![화면 캡처 2020-12-15 012636](https://user-images.githubusercontent.com/66085260/102107118-b47ab080-3e74-11eb-96cb-c4055a600be5.png)
